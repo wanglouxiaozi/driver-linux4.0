@@ -21,9 +21,12 @@ static struct second_dev *second_devp;
 
 static void second_timer_handler(unsigned long arg)
 {
+//	int counter;
 	mod_timer(&second_devp->s_timer, jiffies + HZ); /* 触发下一次定时 */
 	atomic_inc(&second_devp->counter); /* 增加秒计数 */
 
+//	counter = atomic_read(&second_devp->counter);
+//	printk(KERN_INFO "current counter is %d\n", counter);
 	printk(KERN_INFO "current jiffies is %ld\n", jiffies);
 }
 

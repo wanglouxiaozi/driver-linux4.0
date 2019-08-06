@@ -95,8 +95,10 @@ static ssize_t globalfifo_read(struct file *filp, char __user *buf,
 
 	mutex_lock(&dev->mutex);
 	add_wait_queue(&dev->r_wait, &wait);
+	printk("after add_wait_queue\n");
 
 	while (dev->current_len == 0) {
+	printk("into while\n");
 		if (filp->f_flags & O_NONBLOCK) {
 			ret = -EAGAIN;
 			goto out;

@@ -35,6 +35,7 @@ void main(void)
 			perror("epoll_ctl()");
 			return;
 		}
+		//err = epoll_wait(epfd, &ev_globalfifo, 1, -1); /* -1 represent blocking*/
 		err = epoll_wait(epfd, &ev_globalfifo, 1, 15000);
 		if (err < 0) {
 			perror("epoll_wait()");
