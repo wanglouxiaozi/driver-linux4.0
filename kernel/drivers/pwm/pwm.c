@@ -1,0 +1,105 @@
+#include <linux/init.h>
+#include <linux/module.h>
+#include <linux/miscdevice.h>
+#include <linux/fs.h>
+#include <linux/ioctl.h>
+#include <linux/pwm.h>
+#include <linux/uaccess.h>
+
+
+#define PWM_MAGIC 'P'
+#define PWM_ON _IOW(PWM_MAGIC, 0, struct pwm_capture_t)
+#define PWM_OFF _IOW(PWM_MAGIC, 1, struct pwm_capture_t)
+
+struct pwm_device *pwm_dev_0;
+struct pwm_capture_t {
+	unsigned int period;
+	unsigned int duty_cycle;
+}pwmm;
+
+static long pwm_ioctl(struct file *file,
+		unsigned int cmd,
+		unsigned long arg)
+{
+	int ret;
+	switch(cmd) {
+	case PWM_ON:
+		ret = copy_from_user(&pwmm, (void *)arg, sizeof(struct pwm_capture_t));
+		if (ret < 0) 
+			return ret;
+		ret = pwm_config(pwm_dev_0, pwmm.duty_cycle, pwmm.period);
+		if (ret < 0) {
+			printk("pwm_dev_0 ioctl fail");
+			return 0;
+		}
+		pwm_enable(pwm_dev_0);
+		break;
+	case PWM_OFF:
+		ret = copy_from_user(&pwmm, (void *)arg, sizeof(struct pwm_capture_t));
+		if (ret < 0) 
+			return ret;
+		ret = pwm_config(pwm_dev_0, 0, pwmm.period);
+		if (ret < 0) {
+			printk("pwm_dev_2 ioctl fail");
+			return 0;
+		}
+		pwm_disable(pwm_dev_0);
+		break;
+	}
+	return 0;
+}
+//定义初始化硬件操作方法
+static struct file_operations pwm_fops = {
+	.owner = THIS_MODULE,
+	.unlocked_ioctl = pwm_ioctl
+};
+//定义初始化混杂设备对象
+static struct miscdevice pwm_misc = {
+	.minor = MISC_DYNAMIC_MINOR, //动态分配次设备号
+	.name = "mypwm",             //dev/mypwm
+	.fops = &pwm_fops 
+};
+static int pwm_init(void)
+{
+	int ret;
+	printk("regisger pwm_misc device\n");
+	//1.申请pwm资源，设置输出为0
+	pwm_dev_0 = pwm_request(0, "pwm_0");
+	if (pwm_dev_0 == NULL) {
+		printk("pwm_dev_0 register fail\n");
+	}
+
+
+	ret = pwm_config(pwm_dev_0, 0, 500000);
+	if (ret < 0) {
+		printk("pwm_dev_0 config fail\n");
+		return 0;
+	}
+
+	ret = pwm_enable(pwm_dev_0);
+	if (ret == 0) {
+		printk("pwm_dev_0 enable success\n");
+	} else if (ret < 0 ) {
+		printk("pwm_dev_0 enable fail\n");
+		return 0;
+	}
+	//2.注册混杂设备
+	misc_register(&pwm_misc);
+	return 0;
+}
+
+static void pwm_exit(void)
+{
+	printk("unregister pwm_misc device\n");
+	//1.卸载混杂设备
+	misc_deregister(&pwm_misc);
+	//2.释放pwm资源
+	pwm_config(pwm_dev_0, 0, 500000);
+	pwm_disable(pwm_dev_0);
+	pwm_free(pwm_dev_0);
+
+}
+
+module_init(pwm_init);
+module_exit(pwm_exit);
+MODULE_LICENSE("GPL");
