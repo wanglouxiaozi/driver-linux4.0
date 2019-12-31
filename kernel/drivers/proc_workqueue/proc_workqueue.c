@@ -12,6 +12,7 @@
 #include <linux/workqueue.h>
 #include <linux/delay.h>
 #include <linux/device.h>
+#include <linux/interrupt.h>
 
 #define GLOBALMEM_SIZE	0x1000
 #define MEM_CLEAR 0x1
@@ -43,6 +44,21 @@ static void do_my_work(struct work_struct *work)
 	count++;
 	msleep(1000);
 	schedule_work(&my_wq);
+}
+
+static unsigned long device;
+static int do_my_tasklet(unsigned long);
+DECLARE_TASKLET(my_tasklet, do_my_tasklet,(unsigned long)&device);
+
+static int do_my_tasklet(unsigned long data)
+{
+	unsigned long my_data = *(unsigned long *)data;
+	printk("##### %ld\n", my_data);
+
+	device++;
+	tasklet_schedule(&my_tasklet);
+
+	return 0;
 }
 
 static int test_proc_show(struct seq_file *seq, void *v)
@@ -163,6 +179,9 @@ static int __init globalmem_init(void)
 	INIT_WORK(&my_wq, do_my_work);
 	schedule_work(&my_wq);
 
+	device = 20;
+	tasklet_schedule(&my_tasklet);
+
 	return 0;
 
  fail_malloc:
@@ -173,6 +192,7 @@ module_init(globalmem_init);
 
 static void __exit globalmem_exit(void)
 {
+	tasklet_kill(&my_tasklet);
 	test_proc_cleanup();
 	cancel_work_sync(&my_wq);
 	cdev_del(&globalmem_devp->cdev);
