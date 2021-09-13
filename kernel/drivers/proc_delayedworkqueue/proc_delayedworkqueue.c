@@ -35,7 +35,7 @@ static unsigned int variable = 1;
 //static unsigned char variable[20] = "default\n";
 static struct proc_dir_entry *test_dir, *test_entry;
 
-static void do_my_work(struct delay_work *work)
+static void do_my_work(struct work_struct  *work)
 {
 	static int count = 0;
 	memcpy(&variable, &count, sizeof(int));
